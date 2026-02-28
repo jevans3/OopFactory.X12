@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: x12-fhir-converter
+  namespace: fhir-services
+  labels:
+    app: x12-fhir-converter
+    app.kubernetes.io/name: x12-fhir-converter
+    app.kubernetes.io/part-of: infor-fhir-platform
+    app.kubernetes.io/component: translation-engine
+    compliance.hipaa/phi-handler: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: x12-fhir-converter
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: x12-fhir-converter
+        app.kubernetes.io/name: x12-fhir-converter
+        app.kubernetes.io/part-of: infor-fhir-platform
+        compliance.hipaa/phi-handler: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/api/health"
+    spec:
+      serviceAccountName: x12-fhir-converter
+      automountServiceAccountToken: true
+
+      # Pod anti-affinity: spread replicas across nodes for HA
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - x12-fhir-converter
+                topologyKey: kubernetes.io/hostname
+
+      # Security context: run as non-root, read-only FS, drop capabilities
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: x12-fhir-converter
+          image: PLACEHOLDER_IMAGE  # Overridden by Kustomize/Helm
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+
+          # Container security
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+          # Resource limits for tenant isolation
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+
+          # Environment variables
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+            - name: FhirConverter__RequireAuthentication
+              value: "true"
+            - name: FhirConverter__EnableAuditLogging
+              value: "true"
+            # AWS SDK config (for IRSA - IAM Roles for Service Accounts)
+            - name: AWS_DEFAULT_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: x12-fhir-config
+                  key: aws-region
+            - name: FhirConverter__TenantTableName
+              valueFrom:
+                configMapKeyRef:
+                  name: x12-fhir-config
+                  key: tenant-table-name
+            - name: FhirConverter__TransactionLogTableName
+              valueFrom:
+                configMapKeyRef:
+                  name: x12-fhir-config
+                  key: transaction-log-table-name
+            - name: FhirConverter__AuditLogTableName
+              valueFrom:
+                configMapKeyRef:
+                  name: x12-fhir-config
+                  key: audit-log-table-name
+            - name: FhirConverter__BillingSqsQueueUrl
+              valueFrom:
+                configMapKeyRef:
+                  name: x12-fhir-config
+                  key: billing-sqs-queue-url
+
+          # Probes
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+
+          # Volume mounts
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: custom-templates
+              mountPath: /app/Templates/custom
+              readOnly: true
+
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: custom-templates
+          configMap:
+            name: x12-fhir-custom-templates
+            optional: true
+
+      # Graceful shutdown
+      terminationGracePeriodSeconds: 30

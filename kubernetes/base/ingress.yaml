@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: x12-fhir-converter
+  namespace: fhir-services
+  labels:
+    app: x12-fhir-converter
+    app.kubernetes.io/part-of: infor-fhir-platform
+  annotations:
+    # AWS ALB Ingress Controller annotations
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: PLACEHOLDER_CERT_ARN
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    # WAF integration for additional security
+    alb.ingress.kubernetes.io/wafv2-acl-arn: PLACEHOLDER_WAF_ARN
+spec:
+  rules:
+    - host: x12fhir.fhir-services.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: x12-fhir-converter
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - x12fhir.fhir-services.internal

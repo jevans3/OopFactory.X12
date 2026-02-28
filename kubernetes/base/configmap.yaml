@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: x12-fhir-config
+  namespace: fhir-services
+  labels:
+    app: x12-fhir-converter
+    app.kubernetes.io/part-of: infor-fhir-platform
+data:
+  aws-region: us-east-1
+  tenant-table-name: X12FhirConverter-Tenants
+  transaction-log-table-name: X12FhirConverter-TransactionLog
+  audit-log-table-name: X12FhirConverter-AuditLog
+  billing-sqs-queue-url: ""

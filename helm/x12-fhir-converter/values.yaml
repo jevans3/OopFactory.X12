@@ -1,0 +1,129 @@
+# Default values for x12-fhir-converter Helm chart
+# Configures as an EKS module in the Infor FHIR Services namespace
+
+# ─── Image ───────────────────────────────────────────────────────────────────
+image:
+  repository: ""  # Set to your ECR URI: 123456789.dkr.ecr.us-east-1.amazonaws.com/x12-fhir-converter
+  tag: latest
+  pullPolicy: Always
+
+# ─── Replica & Scaling ───────────────────────────────────────────────────────
+replicaCount: 2
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilization: 70
+  targetMemoryUtilization: 80
+
+# ─── Resources ───────────────────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+# ─── Namespace & Tenant Isolation ────────────────────────────────────────────
+namespace: fhir-services
+
+# When deployed as a module alongside Infor FHIR Services,
+# this service shares the namespace but is network-isolated via NetworkPolicy
+networkPolicy:
+  enabled: true
+  # Allow ingress from these sources
+  allowedNamespaces:
+    - ingress-nginx
+  # Allow internal namespace communication (e.g., Infor FHIR Server -> X12 Converter)
+  allowSameNamespace: true
+
+# ─── Service Account (IRSA) ─────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  name: x12-fhir-converter
+  annotations:
+    eks.amazonaws.com/role-arn: ""  # Set to your IAM role ARN
+
+# ─── Ingress ─────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: ""  # Set to your ACM cert ARN
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/wafv2-acl-arn: ""  # Optional WAF ACL
+  host: x12fhir.example.com
+
+# ─── Application Config ─────────────────────────────────────────────────────
+config:
+  awsRegion: us-east-1
+  tenantTableName: X12FhirConverter-Tenants
+  transactionLogTableName: X12FhirConverter-TransactionLog
+  auditLogTableName: X12FhirConverter-AuditLog
+  billingSqsQueueUrl: ""
+  requireAuthentication: true
+  enableAuditLogging: true
+  supportedTransactions: "278,275,270,271,276,277,837,835"
+
+# ─── Pod Disruption Budget ───────────────────────────────────────────────────
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# ─── Security Context ───────────────────────────────────────────────────────
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# ─── Probes ──────────────────────────────────────────────────────────────────
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# ─── Pod Anti-Affinity ───────────────────────────────────────────────────────
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - x12-fhir-converter
+          topologyKey: kubernetes.io/hostname
+
+# ─── Compliance Labels ──────────────────────────────────────────────────────
+# These labels are used by compliance scanners and policy engines (OPA/Gatekeeper)
+complianceLabels:
+  hipaa-phi-handler: "true"
+  hitrust-scope: "true"
+  cms-0057f-compliant: "true"
+  davinci-ig-version: "2.1.0"

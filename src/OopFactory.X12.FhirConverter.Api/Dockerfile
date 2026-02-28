@@ -23,10 +23,20 @@ WORKDIR /app
 # Install curl for health checks
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /app .
+# Create non-root user for HIPAA compliance
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
+RUN chown -R appuser:appuser /app
+
+COPY --from=build --chown=appuser:appuser /app .
 
 # Copy templates (ensure they're available at runtime)
-COPY src/OopFactory.X12.FhirConverter/Templates /app/Templates
+COPY --chown=appuser:appuser src/OopFactory.X12.FhirConverter/Templates /app/Templates
+
+# Create tmp directory for read-only root filesystem
+RUN mkdir -p /tmp && chown appuser:appuser /tmp
+
+# Switch to non-root user
+USER appuser
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080

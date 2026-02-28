@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: x12-fhir-converter
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  aws-region: {{ .Values.config.awsRegion }}
+  tenant-table-name: {{ .Values.config.tenantTableName }}
+  transaction-log-table-name: {{ .Values.config.transactionLogTableName }}
+  audit-log-table-name: {{ .Values.config.auditLogTableName }}
+  billing-sqs-queue-url: {{ .Values.config.billingSqsQueueUrl | quote }}
