@@ -32,19 +32,25 @@ namespace OopFactory.X12.Parsing.Specification
         public string Serialize()
         {
             XmlSerializer xmlSerializer = new XmlSerializer(typeof(TransactionSpecification));
-            MemoryStream mstream = new MemoryStream();
-            xmlSerializer.Serialize(mstream, this);
-            mstream.Seek(0, System.IO.SeekOrigin.Begin);
-            StreamReader streamReader = new StreamReader(mstream);
-            return streamReader.ReadToEnd();
+            using (MemoryStream mstream = new MemoryStream())
+            {
+                xmlSerializer.Serialize(mstream, this);
+                mstream.Seek(0, System.IO.SeekOrigin.Begin);
+                using (StreamReader streamReader = new StreamReader(mstream))
+                {
+                    return streamReader.ReadToEnd();
+                }
+            }
         }
 
         public static TransactionSpecification Deserialize(string xml)
         {
-            System.IO.StringReader stringReader = new System.IO.StringReader(xml);
-            System.Xml.XmlTextReader xmlTextReader = new System.Xml.XmlTextReader(stringReader);
-            System.Xml.Serialization.XmlSerializer xmlSerializer = new System.Xml.Serialization.XmlSerializer(typeof(TransactionSpecification));
-            return ((TransactionSpecification)(xmlSerializer.Deserialize(xmlTextReader)));
+            using (System.IO.StringReader stringReader = new System.IO.StringReader(xml))
+            using (System.Xml.XmlTextReader xmlTextReader = new System.Xml.XmlTextReader(stringReader))
+            {
+                System.Xml.Serialization.XmlSerializer xmlSerializer = new System.Xml.Serialization.XmlSerializer(typeof(TransactionSpecification));
+                return (TransactionSpecification)xmlSerializer.Deserialize(xmlTextReader);
+            }
         }
 
         string IContainerSpecification.LoopId
