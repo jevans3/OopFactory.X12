@@ -2,7 +2,7 @@
 <!--248 Account Assignment/Inquiry and Service/Status-->
 <TransactionSpecification TransactionSetIdentifierCode="248" xmlns="http://tempuri.org/X12ParserSpecification.xsd">
   <Segment SegmentId="BHT" Usage="Required" Repeat="1" />
-  <Loop LoopId="NM1" LoopRepeat="">
+  <Loop LoopId="NM1">
     <Name>Individual or Organizational Name</Name>
     <StartingSegment SegmentId="NM1" />
     <Segment SegmentId="N2" Repeat="1" />
