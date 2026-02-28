@@ -20,19 +20,17 @@ namespace OopFactory.X12.Parsing
 
         internal X12DelimiterSet(char[] isaSegmentAndTerminator)
         {
-            string prefix = new string(isaSegmentAndTerminator).Substring(0,3);
-            
-            if (isaSegmentAndTerminator.Length < 105)
+            if (isaSegmentAndTerminator == null || isaSegmentAndTerminator.Length < 106)
                 throw new ArgumentException("ISA segment and terminator is expected to be exactly 106 characters.");
+
+            string prefix = new string(isaSegmentAndTerminator).Substring(0, 3);
+
             if (prefix.ToUpper() != "ISA")
                 throw new ArgumentException("First segment must start with ISA");
 
             _elementSeparator = isaSegmentAndTerminator[3];
             _subElementSeparator = isaSegmentAndTerminator[104];
-
-            if (isaSegmentAndTerminator.Length >= 106)
-                _segmentTerminator = isaSegmentAndTerminator[105];
-
+            _segmentTerminator = isaSegmentAndTerminator[105];
             if (char.IsLetterOrDigit(_elementSeparator))
                 throw new ArgumentException(_elementSeparator + " is not a valid element separator in position 4 of the file.");
 
