@@ -1,0 +1,9 @@
+{
+  "A1": { "fhirCode": "complete", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "Certified in total" },
+  "A2": { "fhirCode": "partial", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "Certified - partial" },
+  "A3": { "fhirCode": "complete", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "Not certified" },
+  "A4": { "fhirCode": "queued", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "Pended" },
+  "A6": { "fhirCode": "complete", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "Modified" },
+  "CT": { "fhirCode": "complete", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "Contact Payer" },
+  "NA": { "fhirCode": "error", "fhirSystem": "http://hl7.org/fhir/remittance-outcome", "display": "No action required" }
+}

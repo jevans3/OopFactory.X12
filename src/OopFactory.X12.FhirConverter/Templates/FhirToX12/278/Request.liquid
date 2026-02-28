@@ -1,0 +1,72 @@
+{%- comment -%}
+FHIR Claim Bundle → X12 278 Prior Authorization Request
+Input: FHIR Bundle with Claim, Patient, Practitioner, Organization, Coverage, ServiceRequest
+Output: X12 EDI 278 Request
+{%- endcomment -%}
+{%- comment %} Extract resources from the Bundle {% endcomment -%}
+{%- assign claim = nil -%}
+{%- assign patient = nil -%}
+{%- assign coverage = nil -%}
+{%- assign insurer_org = nil -%}
+{%- assign provider_prac = nil -%}
+{%- assign service_request = nil -%}
+{%- for entry_item in entry -%}
+  {%- assign res = entry_item.resource -%}
+  {%- if res.resourceType == "Claim" -%}{%- assign claim = res -%}{%- endif -%}
+  {%- if res.resourceType == "Patient" -%}{%- assign patient = res -%}{%- endif -%}
+  {%- if res.resourceType == "Coverage" -%}{%- assign coverage = res -%}{%- endif -%}
+  {%- if res.resourceType == "Organization" -%}{%- assign insurer_org = res -%}{%- endif -%}
+  {%- if res.resourceType == "Practitioner" -%}{%- assign provider_prac = res -%}{%- endif -%}
+  {%- if res.resourceType == "ServiceRequest" -%}{%- assign service_request = res -%}{%- endif -%}
+{%- endfor -%}
+{%- comment %} Generate control numbers {% endcomment -%}
+{%- assign isa_control = claim.id | truncate: 9, "" -%}
+{%- assign gs_control = claim.id | truncate: 9, "" -%}
+{%- assign st_control = "0001" -%}
+{%- assign today_x12 = claim.created | fhir_date_to_x12 -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HI*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ gs_control }}*X*005010X217~
+ST*278*{{ st_control }}*005010X217~
+BHT*0007*13*{{ claim.id }}*{{ today_x12 }}*1200~
+HL*1**20*1~
+NM1*X3*2*{{ insurer_org.name }}*****46*{{ insurer_org.identifier[0].value }}~
+HL*2*1*21*1~
+{%- if provider_prac.name -%}
+NM1*1P*1*{{ provider_prac.name[0].family }}*{{ provider_prac.name[0].given[0] }}****46*{{ provider_prac.identifier[0].value }}~
+{%- else -%}
+NM1*1P*2*{{ provider_prac.name }}*****46*{{ provider_prac.identifier[0].value }}~
+{%- endif -%}
+HL*3*2*22*1~
+{%- if patient.name -%}
+NM1*IL*1*{{ patient.name[0].family }}*{{ patient.name[0].given[0] }}****MI*{{ patient.identifier[0].value }}~
+{%- endif -%}
+{%- if patient.birthDate -%}
+DMG*D8*{{ patient.birthDate | fhir_date_to_x12 }}*{{ patient.gender | fhir_gender_to_x12 }}~
+{%- endif -%}
+HL*4*3*EV*0~
+{%- for ident in claim.identifier -%}
+TRN*1*{{ ident.value }}*{{ isa_control | rjust: 10, "0" }}~
+{%- endfor -%}
+{%- if claim.item -%}
+{%- assign item0 = claim.item[0] -%}
+{%- assign svc_code = item0.productOrService.coding[0].code -%}
+{%- assign loc_code = item0.locationCodeableConcept.coding[0].code -%}
+UM*{{ svc_code }}*I*3{%- if loc_code -%}*{{ loc_code }}:B{%- endif -%}~
+{%- endif -%}
+{%- if claim.diagnosis -%}
+{%- for diag in claim.diagnosis -%}
+{%- assign diag_code = diag.diagnosisCodeableConcept.coding[0].code -%}
+{%- assign diag_system = diag.diagnosisCodeableConcept.coding[0].system -%}
+{%- if diag_system contains "icd-10" -%}
+HI*ABK:{{ diag_code }}~
+{%- else -%}
+HI*BK:{{ diag_code }}~
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- if item0.quantity -%}
+HSD*VS*{{ item0.quantity.value }}~
+{%- endif -%}
+SE*{{ "placeholder" }}*{{ st_control }}~
+GE*1*{{ gs_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~

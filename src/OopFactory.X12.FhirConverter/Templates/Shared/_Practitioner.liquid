@@ -1,0 +1,6 @@
+{
+  "resourceType": "Practitioner",
+  "id": "{{ prac_uuid }}",
+  "identifier": [{ "system": "{{ prac_id_system | default: 'http://hl7.org/fhir/sid/us-npi' }}", "value": "{{ prac_id }}" }],
+  "name": [{ "family": "{{ prac_last_name | escape_json }}", "given": ["{{ prac_first_name | escape_json }}"] }]
+}

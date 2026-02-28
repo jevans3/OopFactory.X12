@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OopFactory.X12.Hipaa</RootNamespace>
+    <AssemblyName>OopFactory.X12.Hipaa.Core</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Claims\Services\Xsl\*.xslt" />
+    <EmbeddedResource Include="Eligibility\Services\Xsl\*.xslt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OopFactory.X12.Core\OopFactory.X12.Core.csproj" />
+  </ItemGroup>
+
+</Project>

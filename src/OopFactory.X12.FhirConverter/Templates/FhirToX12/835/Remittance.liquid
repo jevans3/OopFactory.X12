@@ -1,0 +1,36 @@
+{%- comment -%}
+FHIR ExplanationOfBenefit → X12 835 Remittance Advice
+{%- endcomment -%}
+{%- assign eob = nil -%}
+{%- assign insurer_org = nil -%}
+{%- assign provider_org = nil -%}
+{%- for entry_item in entry -%}
+  {%- assign res = entry_item.resource -%}
+  {%- if res.resourceType == "ExplanationOfBenefit" -%}{%- assign eob = res -%}{%- endif -%}
+{%- endfor -%}
+{%- for entry_item in entry -%}
+  {%- assign res = entry_item.resource -%}
+  {%- if res.resourceType == "Organization" -%}
+    {%- if insurer_org == nil -%}{%- assign insurer_org = res -%}
+    {%- else -%}{%- assign provider_org = res -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign today_x12 = eob.created | fhir_date_to_x12 -%}
+{%- assign isa_control = eob.id | truncate: 9, "" -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HP*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ isa_control }}*X*005010X221A1~
+ST*835*0001*005010X221A1~
+BPR*I*0*C*ACH~
+TRN*1*{{ eob.identifier[0].value | default: eob.id }}*{{ isa_control | rjust: 10, "0" }}~
+DTM*405*{{ today_x12 }}~
+N1*PR*{{ insurer_org.name }}*XV*{{ insurer_org.identifier[0].value }}~
+N1*PE*{{ provider_org.name }}*XX*{{ provider_org.identifier[0].value }}~
+{%- if eob.item -%}
+{%- for item in eob.item -%}
+CLP*{{ eob.id }}-{{ forloop.index }}*1*{{ item.adjudication[0].amount.value | default: "0" }}*{{ item.adjudication[1].amount.value | default: "0" }}~
+{%- endfor -%}
+{%- endif -%}
+SE*placeholder*0001~
+GE*1*{{ isa_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~

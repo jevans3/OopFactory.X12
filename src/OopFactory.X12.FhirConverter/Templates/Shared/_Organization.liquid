@@ -1,0 +1,9 @@
+{
+  "resourceType": "Organization",
+  "id": "{{ org_uuid }}",
+  "identifier": [{ "system": "{{ org_id_system | default: 'https://x12.org/codes/entity-identifier' }}", "value": "{{ org_id }}" }],
+  "name": "{{ org_name | escape_json }}"
+  {%- if org_type -%}
+  ,"type": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/organization-type", "code": "{{ org_type }}" }] }]
+  {%- endif -%}
+}

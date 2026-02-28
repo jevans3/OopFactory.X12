@@ -1,0 +1,72 @@
+{
+  "resourceType": "CoverageEligibilityRequest",
+  "id": "{{ interchange_control_number | append: '-' | append: transaction_control_number }}",
+  "status": "active",
+  "purpose": ["validation"],
+  "created": "{{ bht.e04 | x12_date }}",
+  "patient": {
+    {%- for hloop in hierarchical_loops -%}
+      {%- if hloop.level_code == "22" -%}
+        {%- assign sub_nm1 = hloop.nm1_IL -%}
+    "reference": "Patient/{{ sub_nm1.e09 }}"
+      {%- endif -%}
+    {%- endfor -%}
+  },
+  "insurer": {
+    {%- for hloop in hierarchical_loops -%}
+      {%- if hloop.level_code == "20" -%}
+        {%- assign payer_nm1 = hloop.nm1_PR -%}
+        {%- if payer_nm1 == nil -%}{%- assign payer_nm1 = hloop.nm1_X3 -%}{%- endif -%}
+    "reference": "Organization/{{ payer_nm1.e09 }}"
+      {%- endif -%}
+    {%- endfor -%}
+  },
+  "contained": [
+    {%- for hloop in hierarchical_loops -%}
+      {%- if hloop.level_code == "20" -%}
+        {%- assign payer_nm1 = hloop.nm1_PR -%}
+        {%- if payer_nm1 == nil -%}{%- assign payer_nm1 = hloop.nm1_X3 -%}{%- endif -%}
+    {
+      "resourceType": "Organization",
+      "id": "{{ payer_nm1.e09 }}",
+      "name": "{{ payer_nm1.e03 | escape_json }}",
+      "identifier": [{ "value": "{{ payer_nm1.e09 }}" }]
+    },
+      {%- endif -%}
+      {%- if hloop.level_code == "21" -%}
+        {%- assign prov_nm1 = hloop.nm1_1P -%}
+    {
+      "resourceType": "Practitioner",
+      "id": "{{ prov_nm1.e09 }}",
+      "name": [{ "family": "{{ prov_nm1.e03 | escape_json }}", "given": ["{{ prov_nm1.e04 | escape_json }}"] }],
+      "identifier": [{ "system": "http://hl7.org/fhir/sid/us-npi", "value": "{{ prov_nm1.e09 }}" }]
+    },
+      {%- endif -%}
+      {%- if hloop.level_code == "22" -%}
+        {%- assign sub_nm1 = hloop.nm1_IL -%}
+    {
+      "resourceType": "Patient",
+      "id": "{{ sub_nm1.e09 }}",
+      "name": [{ "family": "{{ sub_nm1.e03 | escape_json }}", "given": ["{{ sub_nm1.e04 | escape_json }}"] }],
+      "identifier": [{ "system": "http://hl7.org/fhir/sid/us-medicare", "value": "{{ sub_nm1.e09 }}" }]
+      {%- if hloop.dmg -%}
+      ,"birthDate": "{{ hloop.dmg.e02 | x12_date }}"
+      ,"gender": "{{ hloop.dmg.e03 | x12_gender }}"
+      {%- endif -%}
+    }
+      {%- endif -%}
+    {%- endfor -%}
+  ]
+  {%- comment %} Service type from EQ segments if present {% endcomment -%}
+  {%- for hloop in hierarchical_loops -%}
+    {%- if hloop.level_code == "22" -%}
+      {%- for child in hloop.children -%}
+        {%- if child.level_code == "EV" -%}
+  ,"item": [{
+    "category": { "coding": [{ "system": "https://x12.org/codes/service-type-codes", "code": "{{ child.um.e01 | default: '30' }}" }] }
+  }]
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+  {%- endfor -%}
+}

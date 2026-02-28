@@ -1,0 +1,52 @@
+{%- comment -%}
+FHIR Claim → X12 837 Professional Claim
+{%- endcomment -%}
+{%- assign claim = nil -%}
+{%- assign patient = nil -%}
+{%- assign provider_org = nil -%}
+{%- for entry_item in entry -%}
+  {%- assign res = entry_item.resource -%}
+  {%- if res.resourceType == "Claim" -%}{%- assign claim = res -%}{%- endif -%}
+  {%- if res.resourceType == "Patient" -%}{%- assign patient = res -%}{%- endif -%}
+  {%- if res.resourceType == "Organization" -%}{%- assign provider_org = res -%}{%- endif -%}
+{%- endfor -%}
+{%- assign today_x12 = claim.created | fhir_date_to_x12 -%}
+{%- assign isa_control = claim.id | truncate: 9, "" -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HC*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ isa_control }}*X*005010X222A1~
+ST*837*0001*005010X222A1~
+BHT*0019*00*{{ claim.id }}*{{ today_x12 }}*1200*CH~
+HL*1**20*1~
+NM1*85*2*{{ provider_org.name }}*****XX*{{ provider_org.identifier[0].value }}~
+{%- if provider_org.address -%}
+N3*{{ provider_org.address[0].line[0] }}~
+N4*{{ provider_org.address[0].city }}*{{ provider_org.address[0].state }}*{{ provider_org.address[0].postalCode }}~
+{%- endif -%}
+HL*2*1*22*1~
+SBR*P*18*******CI~
+NM1*IL*1*{{ patient.name[0].family }}*{{ patient.name[0].given[0] }}****MI*{{ patient.identifier[0].value }}~
+{%- if patient.birthDate -%}
+DMG*D8*{{ patient.birthDate | fhir_date_to_x12 }}*{{ patient.gender | fhir_gender_to_x12 }}~
+{%- endif -%}
+HL*3*2*23*0~
+CLM*{{ claim.id }}*0***{{ claim.item[0].locationCodeableConcept.coding[0].code | default: "11" }}:B:1*Y*A*Y*Y~
+{%- if claim.diagnosis -%}
+{%- for diag in claim.diagnosis -%}
+{%- assign diag_code = diag.diagnosisCodeableConcept.coding[0].code -%}
+{%- assign diag_system = diag.diagnosisCodeableConcept.coding[0].system -%}
+{%- if diag_system contains "icd-10" -%}
+HI*ABK:{{ diag_code }}~
+{%- else -%}
+HI*BK:{{ diag_code }}~
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- if claim.item -%}
+{%- for item in claim.item -%}
+LX*{{ forloop.index }}~
+SV1*HC:{{ item.productOrService.coding[0].code }}*{{ item.unitPrice.value | default: "0" }}*UN*{{ item.quantity.value | default: "1" }}~
+{%- endfor -%}
+{%- endif -%}
+SE*placeholder*0001~
+GE*1*{{ isa_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~
