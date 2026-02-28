@@ -10,8 +10,13 @@ namespace OopFactory.X12.Parsing.Model.Typed
         private TypedElementContextIdentification _ctx01;
         private TypedElementPositionInSegment _ctx05;
 
-        public TypedSegmentCTX() : base("CTX") 
+        public TypedSegmentCTX() : base("CTX")
         {
+        }
+
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
             _ctx01 = new TypedElementContextIdentification(_segment, 1);
             _ctx05 = new TypedElementPositionInSegment(_segment, 5);
         }
