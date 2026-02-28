@@ -1,0 +1,75 @@
+{
+  "resourceType": "Bundle",
+  "id": "{{ interchange_control_number | append: '-' | append: transaction_control_number }}",
+  "type": "collection",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/us/davinci-cdex/StructureDefinition/cdex-task-attachment-bundle"]
+  },
+  "entry": [
+    {%- assign doc_uuid = "DocumentReference" | generate_uuid: transaction_control_number -%}
+    {%- assign binary_uuid = "Binary" | generate_uuid: transaction_control_number -%}
+    {%- comment %} Extract patient and provider from HL loops {% endcomment -%}
+    {%- for hloop in hierarchical_loops -%}
+      {%- if hloop.level_code == "20" -%}
+        {%- assign payer_nm1 = hloop.nm1_PR -%}
+        {%- if payer_nm1 == nil -%}{%- assign payer_nm1 = hloop.nm1_X3 -%}{%- endif -%}
+        {%- for child in hloop.children -%}
+          {%- if child.level_code == "21" -%}
+            {%- assign prov_nm1 = child.nm1_1P -%}
+            {%- for sub_child in child.children -%}
+              {%- if sub_child.level_code == "22" -%}
+                {%- assign sub_nm1 = sub_child.nm1_IL -%}
+                {%- assign patient_uuid = "Patient" | generate_uuid: sub_nm1.e09 -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {
+      "fullUrl": "urn:uuid:{{ doc_uuid }}",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "{{ doc_uuid }}",
+        "status": "current",
+        "type": {
+          "coding": [{
+            "system": "http://loinc.org",
+            "code": "55107-7",
+            "display": "Addendum Document"
+          }]
+        },
+        "subject": { "reference": "urn:uuid:{{ patient_uuid }}" },
+        "date": "{{ bht.e04 | x12_date }}T00:00:00Z",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "url": "urn:uuid:{{ binary_uuid }}"
+          }
+        }]
+        {%- if trn -%}
+        ,"identifier": [{ "system": "https://x12.org/codes/trn", "value": "{{ trn.e02 }}" }]
+        {%- endif -%}
+        {%- comment %} PWK segment indicates the type of paperwork/attachment {% endcomment -%}
+        {%- if pwk_list -%}
+        ,"category": [
+          {%- for pwk in pwk_list -%}
+          { "coding": [{ "system": "https://x12.org/codes/report-type-code", "code": "{{ pwk.e01 }}", "display": "{{ pwk.e01 }}" }] }{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        ]
+        {%- endif -%}
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:{{ binary_uuid }}",
+      "resource": {
+        "resourceType": "Binary",
+        "id": "{{ binary_uuid }}",
+        "contentType": "application/pdf"
+        {%- if msg -%}
+        ,"data": "{{ msg.e01 }}"
+        {%- endif -%}
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{%- comment -%}
+FHIR CoverageEligibilityResponse → X12 271
+{%- endcomment -%}
+{%- assign today_x12 = created | fhir_date_to_x12 -%}
+{%- assign isa_control = id | truncate: 9, "" -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HB*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ isa_control }}*X*005010X279A1~
+ST*271*0001*005010X279A1~
+BHT*0022*11*{{ id }}*{{ today_x12 }}*1200~
+HL*1**20*1~
+{%- for entry_item in entry -%}
+{%- assign res = entry_item.resource -%}
+{%- if res.resourceType == "Organization" -%}
+NM1*PR*2*{{ res.name }}*****PI*{{ res.identifier[0].value }}~
+{%- endif -%}
+{%- endfor -%}
+HL*2*1*21*1~
+{%- for entry_item in entry -%}
+{%- assign res = entry_item.resource -%}
+{%- if res.resourceType == "Practitioner" -%}
+NM1*1P*1*{{ res.name[0].family }}*{{ res.name[0].given[0] }}****XX*{{ res.identifier[0].value }}~
+{%- endif -%}
+{%- endfor -%}
+HL*3*2*22*0~
+{%- for entry_item in entry -%}
+{%- assign res = entry_item.resource -%}
+{%- if res.resourceType == "Patient" -%}
+NM1*IL*1*{{ res.name[0].family }}*{{ res.name[0].given[0] }}****MI*{{ res.identifier[0].value }}~
+{%- endif -%}
+{%- endfor -%}
+{%- for entry_item in entry -%}
+{%- assign res = entry_item.resource -%}
+{%- if res.resourceType == "CoverageEligibilityResponse" -%}
+{%- if res.insurance -%}
+{%- for ins in res.insurance -%}
+{%- if ins.item -%}
+{%- for it in ins.item -%}
+EB*1**{{ it.category.coding[0].code | default: "30" }}~
+{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+SE*placeholder*0001~
+GE*1*{{ isa_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~

@@ -1,0 +1,122 @@
+{
+  "resourceType": "Bundle",
+  "id": "{{ interchange_control_number | append: '-' | append: transaction_control_number }}",
+  "type": "collection",
+  "timestamp": "{{ interchange_date | x12_date }}T00:00:00Z",
+  "meta": {
+    "profile": ["http://hl7.org/fhir/us/davinci-pas/StructureDefinition/profile-pas-response-bundle"]
+  },
+  "entry": [
+    {%- for hloop in hierarchical_loops -%}
+      {%- if hloop.level_code == "20" -%}
+        {%- assign payer_nm1 = hloop.nm1_X3 -%}
+        {%- if payer_nm1 == nil -%}{%- assign payer_nm1 = hloop.nm1_PR -%}{%- endif -%}
+        {%- assign payer_id = payer_nm1.e09 -%}
+        {%- assign payer_uuid = "Organization" | generate_uuid: payer_id -%}
+        {
+          "fullUrl": "urn:uuid:{{ payer_uuid }}",
+          "resource": {
+            "resourceType": "Organization",
+            "id": "{{ payer_uuid }}",
+            "identifier": [{ "system": "https://x12.org/codes/entity-identifier", "value": "{{ payer_id }}" }],
+            "name": "{{ payer_nm1.e03 | escape_json }}"
+          }
+        },
+        {%- for child_21 in hloop.children -%}
+          {%- if child_21.level_code == "21" -%}
+            {%- assign prov_nm1 = child_21.nm1_1P -%}
+            {%- assign prov_id = prov_nm1.e09 -%}
+            {%- assign prov_uuid = "Practitioner" | generate_uuid: prov_id -%}
+        {
+          "fullUrl": "urn:uuid:{{ prov_uuid }}",
+          "resource": {
+            "resourceType": "Practitioner",
+            "id": "{{ prov_uuid }}",
+            "identifier": [{ "system": "http://hl7.org/fhir/sid/us-npi", "value": "{{ prov_id }}" }],
+            "name": [{ "family": "{{ prov_nm1.e03 | escape_json }}", "given": ["{{ prov_nm1.e04 | escape_json }}"] }]
+          }
+        },
+            {%- for child_22 in child_21.children -%}
+              {%- if child_22.level_code == "22" -%}
+                {%- assign sub_nm1 = child_22.nm1_IL -%}
+                {%- assign sub_member_id = sub_nm1.e09 -%}
+                {%- assign patient_uuid = "Patient" | generate_uuid: sub_member_id -%}
+                {%- assign coverage_uuid = "Coverage" | generate_uuid: sub_member_id -%}
+        {
+          "fullUrl": "urn:uuid:{{ patient_uuid }}",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "{{ patient_uuid }}",
+            "identifier": [{ "system": "http://hl7.org/fhir/sid/us-medicare", "value": "{{ sub_member_id }}" }],
+            "name": [{ "family": "{{ sub_nm1.e03 | escape_json }}", "given": ["{{ sub_nm1.e04 | escape_json }}"] }]
+          }
+        },
+                {%- for child_ev in child_22.children -%}
+                  {%- if child_ev.level_code == "EV" -%}
+                    {%- assign trn = child_ev.trn -%}
+                    {%- assign um = child_ev.um -%}
+                    {%- assign hcr = child_ev.hcr -%}
+                    {%- assign claim_response_uuid = "ClaimResponse" | generate_uuid: trn.e02 -%}
+                    {%- assign claim_uuid = "Claim" | generate_uuid: trn.e02 -%}
+        {
+          "fullUrl": "urn:uuid:{{ claim_response_uuid }}",
+          "resource": {
+            "resourceType": "ClaimResponse",
+            "id": "{{ claim_response_uuid }}",
+            "status": "active",
+            "type": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/claim-type", "code": "professional" }] },
+            "use": "preauthorization",
+            "patient": { "reference": "urn:uuid:{{ patient_uuid }}" },
+            "created": "{{ bht.e04 | x12_date }}",
+            "insurer": { "reference": "urn:uuid:{{ payer_uuid }}" },
+            "request": { "reference": "urn:uuid:{{ claim_uuid }}" },
+            "identifier": [{ "system": "https://x12.org/codes/trn", "value": "{{ trn.e02 }}" }],
+            "outcome": "{{ hcr.e01 | x12_code_to_fhir: 'PriorAuthDecision' }}"
+            {%- if hcr.e02 -%}
+            ,"preAuthRef": "{{ hcr.e02 }}"
+            {%- endif -%}
+            {%- comment %} Service dates from DTP segment {% endcomment -%}
+            {%- if child_ev.dtp_list -%}
+            ,"extension": [
+              {%- for dtp in child_ev.dtp_list -%}
+              {
+                "url": "http://hl7.org/fhir/us/davinci-pas/StructureDefinition/extension-reviewActionDate",
+                {%- if dtp.e02 == "RD8" -%}
+                "valuePeriod": {
+                  "start": "{{ dtp.e03 | x12_date_range_start }}",
+                  "end": "{{ dtp.e03 | x12_date_range_end }}"
+                }
+                {%- else -%}
+                "valueDate": "{{ dtp.e03 | x12_date }}"
+                {%- endif -%}
+              }{%- unless forloop.last -%},{%- endunless -%}
+              {%- endfor -%}
+            ]
+            {%- endif -%}
+            ,"item": [{
+              "itemSequence": 1,
+              "adjudication": [{
+                "category": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/adjudication", "code": "submitted" }] }
+              }]
+              {%- if hcr -%}
+              ,"extension": [{
+                "url": "http://hl7.org/fhir/us/davinci-pas/StructureDefinition/extension-reviewAction",
+                "extension": [
+                  { "url": "number", "valueString": "{{ hcr.e02 }}" },
+                  { "url": "reasonCode", "valueCodeableConcept": { "coding": [{ "system": "https://x12.org/codes/healthcare-certification-result", "code": "{{ hcr.e01 }}" }] } }
+                ]
+              }]
+              {%- endif -%}
+            }]
+          }
+        }
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
+  ]
+}

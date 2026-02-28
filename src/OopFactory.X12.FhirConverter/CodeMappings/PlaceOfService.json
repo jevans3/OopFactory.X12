@@ -1,0 +1,21 @@
+{
+  "11": { "fhirCode": "11", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Office" },
+  "12": { "fhirCode": "12", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Home" },
+  "21": { "fhirCode": "21", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Inpatient Hospital" },
+  "22": { "fhirCode": "22", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "On Campus - Outpatient Hospital" },
+  "23": { "fhirCode": "23", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Emergency Room - Hospital" },
+  "24": { "fhirCode": "24", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Ambulatory Surgical Center" },
+  "31": { "fhirCode": "31", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Skilled Nursing Facility" },
+  "32": { "fhirCode": "32", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Nursing Facility" },
+  "41": { "fhirCode": "41", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Ambulance - Land" },
+  "42": { "fhirCode": "42", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Ambulance - Air or Water" },
+  "49": { "fhirCode": "49", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Independent Clinic" },
+  "50": { "fhirCode": "50", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Federally Qualified Health Center" },
+  "51": { "fhirCode": "51", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Inpatient Psychiatric Facility" },
+  "53": { "fhirCode": "53", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Community Mental Health Center" },
+  "61": { "fhirCode": "61", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Comprehensive Inpatient Rehabilitation Facility" },
+  "65": { "fhirCode": "65", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "End-Stage Renal Disease Treatment Facility" },
+  "71": { "fhirCode": "71", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Public Health Clinic" },
+  "81": { "fhirCode": "81", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Independent Laboratory" },
+  "99": { "fhirCode": "99", "fhirSystem": "https://www.cms.gov/Medicare/Coding/place-of-service-codes/Place_of_Service_Code_Set", "display": "Other Place of Service" }
+}

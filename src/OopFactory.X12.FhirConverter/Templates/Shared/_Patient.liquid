@@ -1,0 +1,20 @@
+{
+  "resourceType": "Patient",
+  "id": "{{ patient_uuid }}",
+  "identifier": [{ "system": "{{ patient_id_system | default: 'http://hl7.org/fhir/sid/us-medicare' }}", "value": "{{ patient_id }}" }],
+  "name": [{ "family": "{{ patient_last_name | escape_json }}", "given": ["{{ patient_first_name | escape_json }}"] }]
+  {%- if patient_dob -%}
+  ,"birthDate": "{{ patient_dob | x12_date }}"
+  {%- endif -%}
+  {%- if patient_gender -%}
+  ,"gender": "{{ patient_gender | x12_gender }}"
+  {%- endif -%}
+  {%- if patient_address_line -%}
+  ,"address": [{
+    "line": ["{{ patient_address_line | escape_json }}"]
+    {%- if patient_city -%},"city": "{{ patient_city | escape_json }}"{%- endif -%}
+    {%- if patient_state -%},"state": "{{ patient_state }}"{%- endif -%}
+    {%- if patient_zip -%},"postalCode": "{{ patient_zip }}"{%- endif -%}
+  }]
+  {%- endif -%}
+}

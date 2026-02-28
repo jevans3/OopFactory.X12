@@ -1,0 +1,42 @@
+{%- comment -%}
+FHIR CoverageEligibilityRequest → X12 270
+{%- endcomment -%}
+{%- assign today_x12 = created | fhir_date_to_x12 -%}
+{%- assign isa_control = id | truncate: 9, "" -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HS*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ isa_control }}*X*005010X279A1~
+ST*270*0001*005010X279A1~
+BHT*0022*13*{{ id }}*{{ today_x12 }}*1200~
+HL*1**20*1~
+{%- if insurer -%}
+{%- for cont in contained -%}
+{%- if cont.resourceType == "Organization" -%}
+NM1*PR*2*{{ cont.name }}*****PI*{{ cont.identifier[0].value }}~
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+HL*2*1*21*1~
+{%- for cont in contained -%}
+{%- if cont.resourceType == "Practitioner" -%}
+NM1*1P*1*{{ cont.name[0].family }}*{{ cont.name[0].given[0] }}****XX*{{ cont.identifier[0].value }}~
+{%- endif -%}
+{%- endfor -%}
+HL*3*2*22*0~
+{%- for cont in contained -%}
+{%- if cont.resourceType == "Patient" -%}
+NM1*IL*1*{{ cont.name[0].family }}*{{ cont.name[0].given[0] }}****MI*{{ cont.identifier[0].value }}~
+{%- if cont.birthDate -%}
+DMG*D8*{{ cont.birthDate | fhir_date_to_x12 }}*{{ cont.gender | fhir_gender_to_x12 }}~
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if item -%}
+{%- for it in item -%}
+EQ*{{ it.category.coding[0].code | default: "30" }}~
+{%- endfor -%}
+{%- else -%}
+EQ*30~
+{%- endif -%}
+SE*placeholder*0001~
+GE*1*{{ isa_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~

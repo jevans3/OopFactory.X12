@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>OopFactory.X12.FhirConverter.Api</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OopFactory.X12.Core\OopFactory.X12.Core.csproj" />
+    <ProjectReference Include="..\OopFactory.X12.FhirConverter\OopFactory.X12.FhirConverter.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: x12-fhir-converter-netpol
+  namespace: fhir-services
+  labels:
+    app: x12-fhir-converter
+    compliance.hipaa/network-isolation: "true"
+spec:
+  podSelector:
+    matchLabels:
+      app: x12-fhir-converter
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow traffic from the ingress controller (ALB Ingress / NGINX)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+
+    # Allow traffic from other services in the fhir-services namespace
+    # (e.g., Infor FHIR Server calling the translator)
+    - from:
+        - podSelector: {}  # Same namespace only
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow HTTPS to AWS services (DynamoDB, SQS, CloudWatch, Secrets Manager)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+
+    # Deny everything else by default (tenant isolation)

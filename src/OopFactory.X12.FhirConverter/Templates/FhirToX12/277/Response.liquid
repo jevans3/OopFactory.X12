@@ -1,0 +1,35 @@
+{%- comment -%}
+FHIR ClaimResponse → X12 277 Claim Status Response
+{%- endcomment -%}
+{%- assign claim_response = nil -%}
+{%- assign patient = nil -%}
+{%- assign payer_org = nil -%}
+{%- for entry_item in entry -%}
+  {%- assign res = entry_item.resource -%}
+  {%- if res.resourceType == "ClaimResponse" -%}{%- assign claim_response = res -%}{%- endif -%}
+  {%- if res.resourceType == "Patient" -%}{%- assign patient = res -%}{%- endif -%}
+  {%- if res.resourceType == "Organization" -%}{%- assign payer_org = res -%}{%- endif -%}
+{%- endfor -%}
+{%- assign today_x12 = claim_response.created | fhir_date_to_x12 -%}
+{%- assign isa_control = claim_response.id | truncate: 9, "" -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HN*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ isa_control }}*X*005010X212~
+ST*277*0001*005010X212~
+BHT*0010*08*{{ claim_response.id }}*{{ today_x12 }}*1200~
+HL*1**20*1~
+NM1*PR*2*{{ payer_org.name }}*****PI*{{ payer_org.identifier[0].value }}~
+HL*2*1*21*1~
+NM1*41*2*{{ payer_org.name }}*****46*{{ payer_org.identifier[0].value }}~
+HL*3*2*22*0~
+NM1*IL*1*{{ patient.name[0].family }}*{{ patient.name[0].given[0] }}****MI*{{ patient.identifier[0].value }}~
+{%- for ident in claim_response.identifier -%}
+TRN*2*{{ ident.value }}*{{ isa_control | rjust: 10, "0" }}~
+{%- endfor -%}
+{%- if claim_response.processNote -%}
+{%- for note in claim_response.processNote -%}
+STC*{{ note.text }}~
+{%- endfor -%}
+{%- endif -%}
+SE*placeholder*0001~
+GE*1*{{ isa_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~

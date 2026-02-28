@@ -1,0 +1,99 @@
+{
+  "resourceType": "Bundle",
+  "id": "{{ interchange_control_number | append: '-' | append: transaction_control_number }}",
+  "type": "collection",
+  "entry": [
+    {%- for hloop in hierarchical_loops -%}
+      {%- if hloop.level_code == "20" -%}
+        {%- assign billing_nm1 = hloop.nm1_85 -%}
+        {%- if billing_nm1 == nil -%}{%- assign billing_nm1 = hloop.nm1_41 -%}{%- endif -%}
+        {%- assign billing_uuid = "Organization" | generate_uuid: billing_nm1.e09 -%}
+    {
+      "fullUrl": "urn:uuid:{{ billing_uuid }}",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "{{ billing_uuid }}",
+        "identifier": [{ "system": "http://hl7.org/fhir/sid/us-npi", "value": "{{ billing_nm1.e09 }}" }],
+        "name": "{{ billing_nm1.e03 | escape_json }}"
+        {%- if hloop.n3 -%}
+        ,"address": [{
+          "line": ["{{ hloop.n3.e01 | escape_json }}"]
+          {%- if hloop.n4 -%}
+          ,"city": "{{ hloop.n4.e01 | escape_json }}"
+          ,"state": "{{ hloop.n4.e02 }}"
+          ,"postalCode": "{{ hloop.n4.e03 }}"
+          {%- endif -%}
+        }]
+        {%- endif -%}
+      }
+    },
+        {%- for child_22 in hloop.children -%}
+          {%- if child_22.level_code == "22" -%}
+            {%- assign sub_nm1 = child_22.nm1_IL -%}
+            {%- assign patient_uuid = "Patient" | generate_uuid: sub_nm1.e09 -%}
+            {%- assign coverage_uuid = "Coverage" | generate_uuid: sub_nm1.e09 -%}
+    {
+      "fullUrl": "urn:uuid:{{ patient_uuid }}",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "{{ patient_uuid }}",
+        "identifier": [{ "value": "{{ sub_nm1.e09 }}" }],
+        "name": [{ "family": "{{ sub_nm1.e03 | escape_json }}", "given": ["{{ sub_nm1.e04 | escape_json }}"] }]
+        {%- if child_22.dmg -%}
+        ,"birthDate": "{{ child_22.dmg.e02 | x12_date }}"
+        ,"gender": "{{ child_22.dmg.e03 | x12_gender }}"
+        {%- endif -%}
+      }
+    },
+            {%- for child_23 in child_22.children -%}
+              {%- if child_23.level_code == "23" -%}
+                {%- comment %} Claim level (CLM loop) {% endcomment -%}
+                {%- assign claim_uuid = "Claim" | generate_uuid: transaction_control_number -%}
+    {
+      "fullUrl": "urn:uuid:{{ claim_uuid }}",
+      "resource": {
+        "resourceType": "Claim",
+        "id": "{{ claim_uuid }}",
+        "status": "active",
+        "use": "claim",
+        "type": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/claim-type", "code": "professional" }] },
+        "patient": { "reference": "urn:uuid:{{ patient_uuid }}" },
+        "provider": { "reference": "urn:uuid:{{ billing_uuid }}" },
+        "created": "{{ bht.e04 | x12_date }}",
+        "priority": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/processpriority", "code": "normal" }] },
+        "insurance": [{ "sequence": 1, "focal": true, "coverage": { "reference": "urn:uuid:{{ coverage_uuid }}" } }]
+        {%- if child_23.hi_list -%}
+        ,"diagnosis": [
+          {%- for hi in child_23.hi_list -%}
+          {%- assign hi_qual = hi.e01 | sub_element: 1 -%}
+          {%- assign hi_code = hi.e01 | sub_element: 2 -%}
+          { "sequence": {{ forloop.index }}, "diagnosisCodeableConcept": { "coding": [{ "system": "{{ hi_qual | diagnosis_code_system }}", "code": "{{ hi_code }}" }] } }{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        ]
+        {%- endif -%}
+        {%- if child_23.sv_list -%}
+        ,"item": [
+          {%- for sv in child_23.sv_list -%}
+          {
+            "sequence": {{ forloop.index }},
+            "productOrService": { "coding": [{ "system": "http://www.ama-assn.org/go/cpt", "code": "{{ sv.e01 | sub_element: 2 }}" }] }
+            {%- if sv.e02 -%}
+            ,"unitPrice": { "value": {{ sv.e02 }}, "currency": "USD" }
+            {%- endif -%}
+            {%- if sv.e04 -%}
+            ,"quantity": { "value": {{ sv.e04 }} }
+            {%- endif -%}
+          }{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        ]
+        {%- endif -%}
+      }
+    }
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endfor -%}
+  ]
+}

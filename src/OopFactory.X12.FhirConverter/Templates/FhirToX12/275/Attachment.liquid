@@ -1,0 +1,33 @@
+{%- comment -%}
+FHIR DocumentReference + Binary → X12 275 Additional Information
+{%- endcomment -%}
+{%- assign doc_ref = nil -%}
+{%- assign binary = nil -%}
+{%- assign patient = nil -%}
+{%- for entry_item in entry -%}
+  {%- assign res = entry_item.resource -%}
+  {%- if res.resourceType == "DocumentReference" -%}{%- assign doc_ref = res -%}{%- endif -%}
+  {%- if res.resourceType == "Binary" -%}{%- assign binary = res -%}{%- endif -%}
+  {%- if res.resourceType == "Patient" -%}{%- assign patient = res -%}{%- endif -%}
+{%- endfor -%}
+{%- assign isa_control = doc_ref.id | truncate: 9, "" -%}
+{%- assign today_x12 = doc_ref.date | fhir_date_time_to_x12_date -%}
+ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *{{ today_x12 | truncate: 6, "" }}*1200*^*00501*{{ isa_control | rjust: 9, "0" }}*0*P*:~
+GS*HI*SENDER*RECEIVER*{{ today_x12 }}*1200*{{ isa_control }}*X*005010X210~
+ST*275*0001*005010X210~
+BGN*11*{{ doc_ref.id }}*{{ today_x12 }}~
+NM1*IL*1*{{ patient.name[0].family }}*{{ patient.name[0].given[0] }}****MI*{{ patient.identifier[0].value }}~
+{%- for ident in doc_ref.identifier -%}
+TRN*1*{{ ident.value }}*{{ isa_control | rjust: 10, "0" }}~
+{%- endfor -%}
+{%- if doc_ref.category -%}
+{%- for cat in doc_ref.category -%}
+PWK*{{ cat.coding[0].code }}*EL~
+{%- endfor -%}
+{%- endif -%}
+{%- if binary.data -%}
+MSG*{{ binary.data }}~
+{%- endif -%}
+SE*placeholder*0001~
+GE*1*{{ isa_control }}~
+IEA*1*{{ isa_control | rjust: 9, "0" }}~

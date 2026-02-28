@@ -1,0 +1,6 @@
+{
+  "AR": { "fhirCode": "preauthorization", "fhirSystem": "http://hl7.org/fhir/claim-use", "display": "Admission Review" },
+  "HS": { "fhirCode": "preauthorization", "fhirSystem": "http://hl7.org/fhir/claim-use", "display": "Health Services Review" },
+  "I": { "fhirCode": "preauthorization", "fhirSystem": "http://hl7.org/fhir/claim-use", "display": "Initial" },
+  "SC": { "fhirCode": "preauthorization", "fhirSystem": "http://hl7.org/fhir/claim-use", "display": "Specialty Care Review" }
+}

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: x12-fhir-converter
+description: |
+  Multi-tenant X12 EDI <-> FHIR R4 Translation API.
+  CMS 0057-F compliant. Da Vinci Burden Reduction Coordinator module.
+  Deploys as a sidecar/module alongside Infor FHIR Services on EKS.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - x12
+  - fhir
+  - edi
+  - healthcare
+  - hipaa
+  - prior-authorization
+  - davinci
+  - cms-0057f
+  - interoperability
+maintainers:
+  - name: jevans3

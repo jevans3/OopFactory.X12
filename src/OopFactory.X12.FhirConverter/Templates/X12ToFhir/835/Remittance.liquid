@@ -1,0 +1,99 @@
+{
+  "resourceType": "Bundle",
+  "id": "{{ interchange_control_number | append: '-' | append: transaction_control_number }}",
+  "type": "collection",
+  "entry": [
+    {%- assign eob_uuid = "ExplanationOfBenefit" | generate_uuid: transaction_control_number -%}
+    {%- comment %} 835 uses a flat (non-HL) structure with N1 and CLP loops {% endcomment -%}
+    {%- assign payer_name = "" -%}
+    {%- assign payee_name = "" -%}
+    {%- for seg in segments -%}
+      {%- if seg.id == "N1" -%}
+        {%- if seg.e01 == "PR" -%}
+          {%- assign payer_name = seg.e02 -%}
+          {%- assign payer_id = seg.e04 -%}
+          {%- assign payer_uuid = "Organization" | generate_uuid: payer_id -%}
+        {%- endif -%}
+        {%- if seg.e01 == "PE" -%}
+          {%- assign payee_name = seg.e02 -%}
+          {%- assign payee_id = seg.e04 -%}
+          {%- assign payee_uuid = "Organization" | generate_uuid: payee_id -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {
+      "fullUrl": "urn:uuid:{{ payer_uuid }}",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "{{ payer_uuid }}",
+        "name": "{{ payer_name | escape_json }}",
+        "identifier": [{ "value": "{{ payer_id }}" }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:{{ payee_uuid }}",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "{{ payee_uuid }}",
+        "name": "{{ payee_name | escape_json }}",
+        "identifier": [{ "value": "{{ payee_id }}" }]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:{{ eob_uuid }}",
+      "resource": {
+        "resourceType": "ExplanationOfBenefit",
+        "id": "{{ eob_uuid }}",
+        "status": "active",
+        "type": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/claim-type", "code": "professional" }] },
+        "use": "claim",
+        "outcome": "complete",
+        "created": "{{ bht.e04 | x12_date }}",
+        "insurer": { "reference": "urn:uuid:{{ payer_uuid }}" },
+        "provider": { "reference": "urn:uuid:{{ payee_uuid }}" },
+        "patient": { "reference": "Patient/unknown" }
+        {%- if trn -%}
+        ,"identifier": [{ "system": "https://x12.org/codes/trn", "value": "{{ trn.e02 }}" }]
+        {%- endif -%}
+        {%- comment %} CLP segments represent individual claims within the remittance {% endcomment -%}
+        {%- assign clp_found = false -%}
+        {%- for seg in segments -%}
+          {%- if seg.id == "CLP" -%}
+            {%- unless clp_found -%}
+        ,"item": [
+            {%- endunless -%}
+            {%- if clp_found -%},{%- endif -%}
+          {
+            "sequence": {{ forloop.index }},
+            "productOrService": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason", "code": "not-applicable" }] },
+            "adjudication": [
+              {
+                "category": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/adjudication", "code": "submitted" }] },
+                "amount": { "value": {{ seg.e03 | default: 0 }}, "currency": "USD" }
+              },
+              {
+                "category": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/adjudication", "code": "benefit" }] },
+                "amount": { "value": {{ seg.e04 | default: 0 }}, "currency": "USD" }
+              }
+            ]
+          }
+            {%- assign clp_found = true -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- if clp_found -%}
+        ]
+        {%- endif -%}
+        {%- if amt_list -%}
+        ,"total": [
+          {%- for amt in amt_list -%}
+          {
+            "category": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/adjudication", "code": "benefit" }] },
+            "amount": { "value": {{ amt.e02 | default: 0 }}, "currency": "USD" }
+          }{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        ]
+        {%- endif -%}
+      }
+    }
+  ]
+}

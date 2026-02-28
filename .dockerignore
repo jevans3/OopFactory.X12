@@ -1,0 +1,12 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/node_modules
+**/.idea
+**/trunk
+**/branches
+**/tags
+**/*.user
+**/*.suo
+**/TestResults
